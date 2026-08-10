@@ -78,11 +78,28 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
     )
 
+
+    joint_broad_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['joint_broad'],
+        output='screen',
+    )
+
+    diff_drive_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['diff_cont'],
+        output='screen',
+    )
+
     return LaunchDescription([
         rsp,
         gazebo,
         delayed_spawn_entity,
         bridge,
+        joint_broad_spawner,
+        diff_drive_spawner,
     ])
 
 

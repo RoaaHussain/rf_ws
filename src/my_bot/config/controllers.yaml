@@ -12,7 +12,7 @@ controller_manager:
 diff_cont:
   ros__parameters:
 
-    publish_rate: 50.0
+    publish_rate: 50.0      #to speed up the robot (vid = 500.0)
 
     base_frame_id: base_link
 
@@ -70,3 +70,12 @@ diff_cont:
 
 # joint_broad:
 #   ros__parameters:
+
+joint_broad:
+  ros__parameters:
+    joints:
+      - left_wheel_joint
+      - right_wheel_joint
+    interfaces:
+      - position
+      - velocity
