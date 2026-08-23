@@ -1,0 +1,9 @@
+<library path="my_bot_hardware">
+  <class name="my_bot/MyBotHardware"
+         type="my_bot::MyBotHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Custom ros2_control hardware interface for my_bot, communicating with an Arduino over serial.
+    </description>
+  </class>
+</library>
