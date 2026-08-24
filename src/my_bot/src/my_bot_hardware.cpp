@@ -134,8 +134,8 @@ hardware_interface::return_type MyBotHardware::write(
   comms_.set_motor_values(l_counts_per_loop, r_counts_per_loop);
 
   return hardware_interface::return_type::OK;
-}
 
+  
 }  // namespace my_bot
 
 #include "pluginlib/class_list_macros.hpp"
