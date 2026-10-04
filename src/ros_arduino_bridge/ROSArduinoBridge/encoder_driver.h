@@ -8,6 +8,11 @@
   //otherwise additional changes in the code are required
   #define LEFT_ENC_PIN_A PD2  //pin 2
   #define LEFT_ENC_PIN_B PD3  //pin 3
+
+  long readEncoder(int i) {
+  if (i == LEFT) return -left_enc_pos;
+  else return right_enc_pos;
+}
   
   //below can be changed, but should be PORTC pins
   #define RIGHT_ENC_PIN_A PC4  //pin A4

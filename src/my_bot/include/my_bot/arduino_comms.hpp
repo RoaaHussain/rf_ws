@@ -4,6 +4,8 @@
 #include <sstream>
 #include <libserial/SerialPort.h>
 #include <iostream>
+#include <thread>
+#include <chrono>
 
 inline LibSerial::BaudRate convert_baud_rate(int baud_rate)
 {
@@ -31,6 +33,7 @@ public:
     timeout_ms_ = timeout_ms;
     serial_conn_.Open(serial_device);
     serial_conn_.SetBaudRate(convert_baud_rate(baud_rate));
+    std::this_thread::sleep_for(std::chrono::seconds(2));  // wait for Arduino auto-reset/boot after DTR
   }
 
   void disconnect() { serial_conn_.Close(); }
