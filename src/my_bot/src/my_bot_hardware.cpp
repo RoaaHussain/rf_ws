@@ -138,4 +138,7 @@ hardware_interface::return_type MyBotHardware::write(
   
 }  // namespace my_bot
 }
+
+
 #include "pluginlib/class_list_macros.hpp"
+PLUGINLIB_EXPORT_CLASS(my_bot::MyBotHardware, hardware_interface::SystemInterface)
