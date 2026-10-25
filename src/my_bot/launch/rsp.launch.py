@@ -4,23 +4,28 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, Command
 from launch_ros.actions import Node
-import xacro
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def launch_setup(context, *args, **kwargs):
     use_sim_time = LaunchConfiguration('use_sim_time')
+    use_ros2_control = LaunchConfiguration('use_ros2_control')
     use_jsp_gui = LaunchConfiguration('use_jsp_gui')
-
-    sim_mode_value = use_sim_time.perform(context)
+    sim_mode = LaunchConfiguration('sim_mode')
 
     pkg_path = get_package_share_directory('my_bot')
     xacro_file = os.path.join(pkg_path, 'description', 'robot.urdf.xacro')
-    robot_description_config = xacro.process_file(
-        xacro_file,
-        mappings={'sim_mode': sim_mode_value}
-    ).toxml()
+
+    robot_description_config = ParameterValue(
+        Command([
+            'xacro ', xacro_file,
+            ' use_ros2_control:=', use_ros2_control,
+            ' sim_mode:=', sim_mode,
+        ]),
+        value_type=str,
+    )
 
     params = {
         'robot_description': robot_description_config,
@@ -31,7 +36,7 @@ def launch_setup(context, *args, **kwargs):
         package='robot_state_publisher',
         executable='robot_state_publisher',
         output='screen',
-        parameters=[params]
+        parameters=[params],
     )
 
     node_joint_state_publisher_gui = Node(
@@ -51,6 +56,15 @@ def generate_launch_description():
             'use_sim_time',
             default_value='true',
             description='Use simulation (Gazebo) clock if true'),
+        DeclareLaunchArgument(
+            'use_ros2_control',
+            default_value='true',
+            description='Use ros2_control if true'),
+        DeclareLaunchArgument(
+            'sim_mode',
+            default_value='false',
+            description='Use Gazebo ros2_control plugin if true, '
+                        'real hardware plugin if false'),
         DeclareLaunchArgument(
             'use_jsp_gui',
             default_value='false',
