@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>my_bot remote</title>
+<style>
+:root{
+  --bg:#06122b; --panel:#0e2350; --edge:#1d3f86; --blue:#2f7bff; --sky:#8fc0ff;
+  --ink:#e8f1ff; --mute:#7f9bd0; --stop:#e5484d;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{
+  background:radial-gradient(120% 80% at 50% 0%,#0d2a66 0%,var(--bg) 60%);
+  color:var(--ink);font-family:system-ui,"Segoe UI",Tahoma,sans-serif;
+  display:flex;flex-direction:column;gap:14px;padding:14px;
+  padding-top:max(14px,env(safe-area-inset-top));
+  padding-bottom:max(14px,env(safe-area-inset-bottom));
+  overscroll-behavior:none;user-select:none;-webkit-user-select:none;
+}
+header{display:flex;align-items:center;gap:10px}
+.dot{width:12px;height:12px;border-radius:50%;background:#d9a441;flex:none}
+.dot.on{background:#3ddc97;box-shadow:0 0 10px #3ddc97}
+.dot.off{background:var(--stop)}
+#status{flex:1;font-size:14px;color:var(--sky)}
+#addr{
+  width:150px;direction:ltr;text-align:left;background:var(--panel);color:var(--ink);
+  border:1px solid var(--edge);border-radius:10px;padding:8px 10px;font-size:14px;
+}
+#go{
+  background:var(--blue);color:#fff;border:0;border-radius:10px;padding:9px 14px;
+  font-size:14px;font-weight:600;
+}
+#go:active{background:#1d5fd1}
+main{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+#pad{
+  width:min(78vw,52vh,340px);aspect-ratio:1;border-radius:50%;position:relative;
+  background:radial-gradient(circle,#13306f 0%,var(--panel) 70%);
+  border:2px solid var(--edge);touch-action:none;
+  box-shadow:inset 0 0 40px #04102b,0 0 0 8px rgba(47,123,255,.08);
+}
+#pad::before,#pad::after{content:"";position:absolute;background:var(--edge);opacity:.6}
+#pad::before{left:50%;top:10%;bottom:10%;width:1px}
+#pad::after{top:50%;left:10%;right:10%;height:1px}
+#knob{
+  position:absolute;left:50%;top:50%;width:34%;aspect-ratio:1;border-radius:50%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle at 35% 30%,#8fc0ff,var(--blue) 55%,#1a56c4);
+  box-shadow:0 6px 18px rgba(0,0,0,.5);
+}
+#readout{text-align:center;font-size:15px;color:var(--sky);direction:ltr;min-height:22px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:16px;padding:12px 14px;display:grid;gap:10px}
+.row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;font-size:14px}
+.row b{color:var(--sky);direction:ltr;font-variant-numeric:tabular-nums}
+.row input{grid-column:1/-1;width:100%;accent-color:var(--blue);height:28px}
+#stop{
+  background:var(--stop);color:#fff;border:0;border-radius:18px;padding:18px;
+  font-size:22px;font-weight:800;letter-spacing:.5px;
+  box-shadow:0 6px 0 #a02a2e;
+}
+#stop:active{transform:translateY(4px);box-shadow:0 2px 0 #a02a2e}
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span>
+  <span id="status">غير متصل</span>
+  <input id="addr" placeholder="IP:9090" inputmode="url" autocomplete="off">
+  <button id="go">اتصال</button>
+</header>
+
+<main><div id="pad"><div id="knob"></div></div></main>
+<div id="readout">0.00 m/s · 0.00 rad/s</div>
+
+<section class="card">
+  <div class="row"><span>أقصى سرعة للأمام والخلف</span><b id="linv">0.20 m/s</b>
+    <input id="lin" type="range" min="0.05" max="1" step="0.05" value="0.2"></div>
+  <div class="row"><span>أقصى سرعة للدوران</span><b id="angv">1.00 rad/s</b>
+    <input id="ang" type="range" min="0.2" max="3" step="0.1" value="1"></div>
+</section>
+
+<button id="stop">إيقاف</button>
+
+<script>
+const $ = id => document.getElementById(id);
+const TOPIC = "/diff_cont/cmd_vel";
+const TYPE  = "geometry_msgs/msg/TwistStamped";
+let ws = null, vx = 0, wz = 0, timer = null, stopped = false;
+
+// عنوان rosbridge: نفس الجهاز اللي فتح الصفحة، على بورت 9090
+$("addr").value = (location.hostname || "192.168.1.100") + ":9090";
+
+function setStatus(text, cls){ $("status").textContent = text; $("dot").className = "dot " + (cls||""); }
+
+function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setStatus("بيتصل...", "");
+  try { ws = new WebSocket("ws://" + $("addr").value.trim()); }
+  catch(e){ setStatus("العنوان غلط", "off"); return; }
+  ws.onopen = () => {
+    ws.send(JSON.stringify({op:"advertise", topic:TOPIC, type:TYPE}));
+    setStatus("متصل", "on");
+    clearInterval(timer);
+    timer = setInterval(send, 100);   // 10 مرات في الثانية
+  };
+  ws.onclose = () => { clearInterval(timer); setStatus("الاتصال اتقطع", "off"); };
+  ws.onerror = () => setStatus("فشل الاتصال", "off");
+}
+
+function send(){
+  if (!ws || ws.readyState !== 1) return;
+  // الـ stamp صفر عشان الـ controller يستخدم وقته هو (يتفادى فرق الساعة مع الـ sim)
+  ws.send(JSON.stringify({op:"publish", topic:TOPIC, msg:{
+    header:{stamp:{sec:0,nanosec:0}, frame_id:"base_link"},
+    twist:{linear:{x:vx,y:0,z:0}, angular:{x:0,y:0,z:wz}}
+  }}));
+}
+
+// ----- joystick -----
+const pad = $("pad"), knob = $("knob");
+let active = null;
+
+function update(e){
+  const r = pad.getBoundingClientRect();
+  const R = r.width/2;
+  let dx = e.clientX - (r.left + R), dy = e.clientY - (r.top + R);
+  const d = Math.hypot(dx, dy), lim = R*0.66;
+  if (d > lim){ dx *= lim/d; dy *= lim/d; }
+  knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  const nx = dx/lim, ny = -dy/lim;               // لفوق = موجب
+  vx = +(ny * $("lin").value).toFixed(3);
+  wz = +(-nx * $("ang").value).toFixed(3);       // يمين = دوران مع عقارب الساعة (سالب)
+  show();
+}
+function release(){
+  active = null; vx = 0; wz = 0;
+  knob.style.transform = "translate(-50%,-50%)";
+  show(); send();
+}
+function show(){ $("readout").textContent = `${vx.toFixed(2)} m/s · ${wz.toFixed(2)} rad/s`; }
+
+pad.addEventListener("pointerdown", e => { active = e.pointerId; pad.setPointerCapture(e.pointerId); update(e); });
+pad.addEventListener("pointermove", e => { if (e.pointerId === active) update(e); });
+pad.addEventListener("pointerup", release);
+pad.addEventListener("pointercancel", release);
+
+// ----- sliders -----
+$("lin").oninput = () => $("linv").textContent = (+$("lin").value).toFixed(2) + " m/s";
+$("ang").oninput = () => $("angv").textContent = (+$("ang").value).toFixed(2) + " rad/s";
+
+// ----- stop -----
+function hardStop(){
+  release();
+  for (let i = 0; i < 5; i++) setTimeout(send, i*40);
+}
+$("stop").addEventListener("pointerdown", hardStop);
+
+// أمان: لو الصفحة اتخفت أو الشاشة قفلت، وقّف
+document.addEventListener("visibilitychange", () => { if (document.hidden) hardStop(); });
+window.addEventListener("pagehide", hardStop);
+
+$("go").onclick = connect;
+connect();
+</script>
+</body>
+</html>

@@ -28,7 +28,8 @@ endif()
 
 # Install all directories
 install(
-  DIRECTORY config description launch worlds
+  DIRECTORY config description launch worlds web
+
   DESTINATION share/${PROJECT_NAME}
 )
 
