@@ -5,3 +5,9 @@ log/
 *.gv
 .vscode/
 .vscode/
+*.bak
+*.data
+*.posegraph
+__pycache__/
+*.pyc
+bin/
