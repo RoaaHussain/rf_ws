@@ -25,20 +25,15 @@ Flash Ubuntu 24.04, then do ONE full upgrade before installing ROS:
 
 Build only my_bot first; the camera/libcamera packages take very long.
 
-## 4. Device names (udev)
-Create /etc/udev/rules.d/99-robot.rules with:
+## 4. Device names
+The code uses /dev/serial/by-id paths, no udev rules needed:
 
-    # LiDAR RPLIDAR (CP210x)
-    SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="rplidar"
-    # ESP32 board (CH340)
-    SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="esp32"
+- Arduino Uno: /dev/serial/by-id/usb-Arduino__www.arduino.cc__0043_5513931333535180C152-if00 (set in src/my_bot/description/ros2_control.xacro). The path contains this Uno's serial number: if the Uno is replaced, update it (ls /dev/serial/by-id/).
+- RPLIDAR: /dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0 (set in src/my_bot/launch/rplidar.launch.py)
 
-Then:
+Permissions:
 
-    sudo udevadm control --reload-rules && sudo udevadm trigger
     sudo usermod -aG dialout,video $USER   # then log out and in
-
-Devices appear as /dev/rplidar and /dev/esp32.
 
 ## 5. ~/.bashrc
 
@@ -49,7 +44,7 @@ Devices appear as /dev/rplidar and /dev/esp32.
     export ROS_STATIC_PEERS=<IP of the PC running RViz>
 
 ## 6. Firmware
-Uploaded from the Arduino IDE. Board / port: (fill in)
+Arduino Uno (genuine), uploaded from the Arduino IDE.
 
 ## 7. Run
     ros2 launch my_bot launch_robot.launch.py
